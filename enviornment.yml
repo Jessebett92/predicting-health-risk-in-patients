@@ -1,0 +1,9 @@
+name: myenv
+channels: 
+  - defaults
+dependencies:
+  - python
+  - pandas
+  - scikit-learn
+  - pytest
+  - ipython
