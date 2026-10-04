@@ -26,6 +26,9 @@ def main():
         print(f"Total records: {record_count}")
         print(f"Number of patients aged 50 or older: {higher_age_split}")
         print(f"Number of patients younger than 50: {lower_age_split}")
+        print("")
+        print("CHECK FOR MISSING VALUES")
+        print(dataframe.isnull().sum())
 
 
     # execution steps
