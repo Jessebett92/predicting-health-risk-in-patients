@@ -16,3 +16,4 @@ def rf_model_train(X_train, X_test, y_train, y_test):
     print(confusion_matrix(y_test, y_pred))
 
     return model
+
