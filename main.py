@@ -3,16 +3,27 @@
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+import xgboost as xgb
 
 from rf_training import rf_model_train
 from dt_training import decision_tree_train
 from lr_training import lr_model_train
 from xgboost_training import xgb_model_train
+
+from params import param_assign
+
 from cross_vali import cross_val_with_smote
+
 
 dataset = "healthcare_real_time_dataset.csv"
 
 def main():
+
+    rf_params, dt_params, lr_params, xgb_params = param_assign()
+
 
     def read_data(data):
         df = pd.read_csv(data)
@@ -51,6 +62,7 @@ def main():
 
         
     def preprocess_data(df):
+
         # Fill missing values in 'Chronic Disease History' with 'Unknown'
         df.loc[:, 'Chronic Disease History'] = df['Chronic Disease History'].fillna('Unknown')
 
