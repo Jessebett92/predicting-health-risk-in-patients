@@ -7,3 +7,5 @@ dependencies:
   - scikit-learn
   - pytest
   - ipython
+  - matplotlib
+  - seaborn

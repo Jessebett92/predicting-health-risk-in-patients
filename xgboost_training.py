@@ -11,9 +11,10 @@ def xgb_model_train(X_train, X_test, y_train, y_test):
         eval_metric='logloss',
         random_state=123,
         n_estimators=100,
-        max_depth=6,
-        learning_rate=0.1,
-        scale_pos_weight=sum(y_train == 0) / sum(y_train == 1)
+        max_depth=2,
+        learning_rate=0.01,
+        scale_pos_weight=2
+        # sum(y_train == 0) / sum(y_train == 1)
     )
 
     model.fit(X_train, y_train)
