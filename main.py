@@ -6,16 +6,33 @@ import xgboost as xgb
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
-    accuracy_score,
-    classification_report,
+
+    #percentage of predictions that are correct
+    accuracy_score, 
+    
+    #Number of times the model predicts a 
+    # patient as high risk and is correct.
+    classification_report, 
+   
+    
     confusion_matrix,
+
+    #The balance between precision and recall
     f1_score,
+
     precision_score,
+
+    #The percent of actual high cases that were detected. 
     recall_score,
+
+    #How well the model ranks positive cases above the negative ones. 
     roc_auc_score,
+
+    #Used for visualization
     roc_curve,
     auc,
 )
+
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 
 from cross_vali import cross_val_func
@@ -24,8 +41,8 @@ from rf_training import rf_model_train
 
 dataset = "healthcare_real_time_dataset.csv"
 
-
 def main():
+    
     def ytarget_binary_convert(y, positive_class="High"):
         return (y == positive_class).astype(int)
 
@@ -49,15 +66,6 @@ def main():
         plt.title("Distribution of Health Risk Levels")
         plt.xlabel("Health Risk Level")
         plt.ylabel("Count")
-        plt.tight_layout()
-        plt.show()
-
-    def plot_correlation_heatmap(df):
-        numeric_df = df.select_dtypes(include=[np.number])
-
-        plt.figure(figsize=(14, 10))
-        sns.heatmap(numeric_df.corr(), cmap="coolwarm", center=0, annot=False)
-        plt.title("Correlation Heatmap of Numeric Features")
         plt.tight_layout()
         plt.show()
 
@@ -93,6 +101,8 @@ def main():
         df["Chronic Disease History"] = df["Chronic Disease History"].fillna("Unknown")
 
         # Categorical feature bins
+
+        #AGE
         df["Age_Group"] = pd.cut(
             df["Age"],
             bins=[0, 30, 50, 100],
@@ -100,6 +110,7 @@ def main():
             include_lowest=True,
         )
 
+        #BMI
         df["BMI_Category"] = pd.cut(
             df["BMI"],
             bins=[0, 18.5, 25, 32, 100],
@@ -107,10 +118,10 @@ def main():
             include_lowest=True,
         )
 
-        # Simple binary feature
+        #Pysical Activity
         df["Is_Active"] = (df["Physical Activity (hours/week)"] >= 2.5).astype(int)
 
-        # Interaction features
+        #BMI/Age and Stress/Sleep
         df["Age_BMI"] = df["Age"] * df["BMI"]
         df["Stress_Sleep_Ratio"] = df["Stress Level (1-10)"] / (
             df["Sleep Duration (hours/day)"] + 1e-5
@@ -119,7 +130,7 @@ def main():
             df["BMI"] + 1e-5
         )
 
-        # Combined lifestyle risk
+        #Alcohol/Smoking
         df["Alcohol_Smoking_Risk"] = (
             (df["Alcohol Consumption (per week)"] >= 7).astype(int)
             + (df["Smoking Status"] != "Never").astype(int)
@@ -289,9 +300,6 @@ def main():
     # Visual 1: target distribution
     plot_target_distribution(df)
 
-    # Visual 2: correlation heatmap
-    plot_correlation_heatmap(df)
-
     X, y = preprocess_data(df)
     y_binary = ytarget_binary_convert(y, positive_class="High")
 
@@ -321,9 +329,9 @@ def main():
     default_preds = (test_prob >= 0.50).astype(int)
     tuned_preds = (test_prob >= optimal_thresh).astype(int)
 
-    print("\n--- XGBoost Default Threshold (0.50) ---")
-    evaluate_predictions(y_test, default_preds, test_prob, label="XGBoost Default Threshold")
-    plot_confusion_matrix(y_test, default_preds, title="XGBoost Confusion Matrix (Default Threshold)")
+    print("\n--- XGBoost Standard Default Threshold ---")
+    evaluate_predictions(y_test, default_preds, test_prob, label="XGBoost Standard Default Threshold")
+    plot_confusion_matrix(y_test, default_preds, title="XGBoost Confusion Matrix ( Standard Default Threshold)")
 
     print(f"\n--- XGBoost Tuned Threshold ({optimal_thresh:.2f}) ---")
     evaluate_predictions(y_test, tuned_preds, test_prob, label="XGBoost Tuned Threshold")
