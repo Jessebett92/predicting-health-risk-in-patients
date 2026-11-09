@@ -1,3 +1,14 @@
+# Age,
+# Gender,
+# BMI,
+# Smoking Status,
+# Alcohol Consumption (per week),
+# Physical Activity (hours/week),
+# Sleep Duration (hours/day),
+# Chronic Disease History,
+# Stress Level (1-10),
+# Health Risk Level
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -42,11 +53,17 @@ from rf_training import rf_model_train
 dataset = "healthcare_real_time_dataset.csv"
 
 def main():
-    
+
+    """
+    Target column is changed from multi-feature to binary. 
+    """
     def ytarget_binary_convert(y, positive_class="High"):
         return (y == positive_class).astype(int)
 
     def exploratory_step(df):
+        """
+        Data Exploration
+        """
         print(df.info())
         print()
         print(f"Total records: {df.shape[0]}")
@@ -95,10 +112,15 @@ def main():
         plt.show()
 
     def preprocess_data(df):
+
+        """
+        Create copy of the dataset.
+        """
         df = df.copy()
 
         # Fill missing values
-        df["Chronic Disease History"] = df["Chronic Disease History"].fillna("Unknown")
+        df["Chronic Disease History"] = df["Chronic Disease History"].fillna("None")
+
 
         # Categorical feature bins
 
@@ -122,21 +144,50 @@ def main():
         df["Is_Active"] = (df["Physical Activity (hours/week)"] >= 2.5).astype(int)
 
         #BMI/Age and Stress/Sleep
+        """
+        - Multiply age / bmi together 
+        """
         df["Age_BMI"] = df["Age"] * df["BMI"]
+
+        """
+        - divides sress level by sleep duration
+        - 1e-5 is equal to 0.00001 in python. This avoids division by zero. 
+        """
         df["Stress_Sleep_Ratio"] = df["Stress Level (1-10)"] / (
             df["Sleep Duration (hours/day)"] + 1e-5
         )
+        
+        """
+        physical activity is divided by bmi. 
+        """
         df["Activity_BMI"] = df["Physical Activity (hours/week)"] / (
             df["BMI"] + 1e-5
         )
 
+        """
+        - checks whether the patient consumes at least 7 alcoholic beverages per week
+        - this creates 1 if seven or more and 0 if fewer than seven. 
+        """
+
+        """
+        Checks if the patient has ever been a tobacco user. 
+        this creates 1 if ever used and 0 if never. 
+
+        The final score for this funcion will rage from 0 to 2 depending on these features. 
+        """
         #Alcohol/Smoking
         df["Alcohol_Smoking_Risk"] = (
             (df["Alcohol Consumption (per week)"] >= 7).astype(int)
+                
             + (df["Smoking Status"] != "Never").astype(int)
         )
 
         # Chronic condition risk flag
+        """
+        These are high risk conditions. 
+        The result is 1 if having diabetes or heart disease. 
+        0 if there is anything else. 
+        """
         high_risk_conditions = ["Diabetes", "Heart Disease"]
         df["High_Risk_Condition"] = df["Chronic Disease History"].isin(
             high_risk_conditions
@@ -144,6 +195,10 @@ def main():
 
         # Lifestyle score
         def lifestyle_score(row):
+            """
+            Creates a score system for healthy living indicators on lifestyle data
+            features. 
+            """
             score = 0
             if row["Sleep Duration (hours/day)"] >= 7:
                 score += 1
@@ -161,20 +216,41 @@ def main():
 
         df["Lifestyle_Score"] = df.apply(lifestyle_score, axis=1)
 
+        """
+        Selects the target column and assigns this to "y"
+        Creates the DataFrame X by removing the target column. 
+        X = input features and y = the output the model will predict.
+        """
         y = df["Health Risk Level"]
         X = df.drop("Health Risk Level", axis=1)
 
+        #Encode multi-category columns (Gender, Smoking status, etc.) 
+        # into numerical columns.
         X_encoded = pd.get_dummies(X, drop_first=True)
         return X_encoded, y
 
     def training_split(X, y):
+        """
+        performing an 80 / 20 split on the dataframe. 
+        """
         X_temp, X_test, y_temp, y_test = train_test_split(
             X, y, test_size=0.2, random_state=123, stratify=y
         )
+
+        """
+        Splits again on the temporary 80% into 75 for training / 25 for validation
+        """
+
         X_train, X_val, y_train, y_val = train_test_split(
             X_temp, y_temp, test_size=0.25, random_state=123, stratify=y_temp
         )
 
+        """
+        This creates:
+        60% - Training
+        20% - Validation
+        20% - Testing
+        """
         print(f"Training set size: {X_train.shape[0]}")
         print(f"Validation set size: {X_val.shape[0]}")
         print(f"Testing set size: {X_test.shape[0]}")
@@ -182,10 +258,31 @@ def main():
         return X_train, X_val, X_test, y_train, y_val, y_test
 
     def xgb_hyperparameter_tuning(X_train, y_train):
+
+        """
+        To handle imbalance, this function searches for the best XGBoost settings.
+        """
+
+        """
+        The poitive cases are counted (high-risk examples)
+        """
         pos_count = np.sum(y_train == 1)
+
+        """
+        Counts the negative cases (not high risk examples)
+        """
         neg_count = np.sum(y_train == 0)
+
+        """
+        Calculates the balance of the target column and will tell XGBoost to give more 
+        importance to the positive examples if the negative outweighs them. 
+        """
         calculated_weight = neg_count / pos_count if pos_count > 0 else 1.0
 
+
+        """
+        A dictionary of possible hyperparameter values
+        """
         param_dist = {
             "max_depth": [2, 3, 4],
             "learning_rate": [0.01, 0.05, 0.1],
@@ -197,6 +294,12 @@ def main():
             "reg_lambda": [1.0, 2.0, 5.0],
         }
 
+        """
+        Creating the model
+
+        binary classification is expressed, logarithmic loss is used as the evaluation metric
+        during training. It penalizes the confident incorrect predictions that the model makes. 
+        """
         model = xgb.XGBClassifier(
             objective="binary:logistic",
             eval_metric="logloss",
